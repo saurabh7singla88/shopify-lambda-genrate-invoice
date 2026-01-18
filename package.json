@@ -1,0 +1,14 @@
+{
+  "name": "invoice-generation-from-code",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Lambda function using PDFKit to generate invoices without HTML templates",
+  "main": "lambda-order-to-invoice.mjs",
+  "dependencies": {
+    "pdfkit": "^0.15.0",
+    "@aws-sdk/client-s3": "^3.637.0"
+  },
+  "devDependencies": {
+    "dotenv": "^16.4.5"
+  }
+}
