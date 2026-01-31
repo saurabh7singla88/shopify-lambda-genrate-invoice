@@ -1,11 +1,21 @@
 # Lambda Deployment Guide - Modular Invoice Generator
 
+## Overview
+
+This Lambda function generates PDF invoices from Shopify orders with **dynamic template configuration**. It supports:
+- Shop-specific customization from DynamoDB
+- Template defaults from DynamoDB
+- Environment variable fallback for backward compatibility
+
+📖 **See [TEMPLATE_CONFIG_SYSTEM.md](./TEMPLATE_CONFIG_SYSTEM.md) for detailed configuration documentation**
+
 ## Prerequisites
 - AWS Account with appropriate permissions
 - AWS CLI installed (optional for CLI deployment)
 - Node.js 18.x or 20.x installed locally
 - S3 bucket for storing invoices
 - SNS topic for email notifications
+- DynamoDB tables: Templates, TemplateConfigurations, ShopifyOrders
 
 ---
 
@@ -13,7 +23,7 @@
 
 ```powershell
 # Navigate to the project directory
-cd invoice-generation-from-code
+cd lambda-generate-invoice
 
 # Install dependencies
 npm install
@@ -23,6 +33,8 @@ npm install
 - `pdfkit` - PDF generation
 - `@aws-sdk/client-s3` - S3 file uploads
 - `@aws-sdk/client-sns` - Email notifications
+- `@aws-sdk/client-dynamodb` - DynamoDB access for template configs
+- `@aws-sdk/lib-dynamodb` - DynamoDB Document Client
 
 ---
 
@@ -47,7 +59,7 @@ zip -r lambda-deployment.zip index.mjs package.json node_modules/ config/ transf
 - `config/` - AWS client configuration
 - `transformers/` - Data transformation logic
 - `generators/` - PDF generation
-- `services/` - S3 and SNS services
+- `services/` - S3, SNS, and **template config services**
 
 ---
 
@@ -89,10 +101,32 @@ zip -r lambda-deployment.zip index.mjs package.json node_modules/ config/ transf
 1. Go to **"Configuration"** → **"Environment variables"**
 2. Click **"Edit"** → **"Add environment variable"**
 3. Add the following:
+
+**Required:**
    - `S3_BUCKET_NAME` = `your-invoice-bucket-name`
    - `SNS_TOPIC_ARN` = `arn:aws:sns:region:account-id:topic-name`
    - `AWS_REGION` = `us-east-1` (or your preferred region)
+   - `TABLE_NAME` = `ShopifyOrders` (for order tracking)
+   - `SHOPS_TABLE_NAME` = `Shops` (to get shop's configured template)
+   - `TEMPLATES_TABLE_NAME` = `Templates` (for template defaults)
+   - `TEMPLATE_CONFIG_TABLE_NAME` = `TemplateConfigurations` (for shop-specific configs)
+
+**Fallback Configuration** (used if DynamoDB is unavailable):
+   - `COMPANY_NAME` = `Your Company Name`
+   - `COMPANY_LEGAL_NAME` = `Your Legal Entity Name`
+   - `COMPANY_ADDRESS_LINE1` = `Address Line 1`
+   - `COMPANY_ADDRESS_LINE2` = `City, State Zip`
+   - `COMPANY_GSTIN` = `Your GSTIN Number`
+   - `COMPANY_LOGO_FILENAME` = `logo.jpg`
+   - `INVOICE_FONT_FAMILY` = `Helvetica`
+   - `INVOICE_TITLE_FONT_SIZE` = `28`
+   - `INVOICE_HEADING_FONT_SIZE` = `16`
+   - `INVOICE_BODY_FONT_SIZE` = `11`
+   - `INVOICE_PRIMARY_COLOR` = `#333333`
+
 4. Click **"Save"**
+
+**Note:** The Lambda will prioritize shop-specific configs from DynamoDB over environment variables. See [TEMPLATE_CONFIG_SYSTEM.md](./TEMPLATE_CONFIG_SYSTEM.md) for details.
 
 ### Step 3.6: Configure IAM Permissions
 1. Go to **"Configuration"** → **"Permissions"**
@@ -118,6 +152,20 @@ zip -r lambda-deployment.zip index.mjs package.json node_modules/ config/ transf
         "sns:Publish"
       ],
       "Resource": "arn:aws:sns:*:*:*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:GetItem",
+        "dynamodb:Query",
+        "dynamodb:UpdateItem"
+      ],
+      "Resource": [
+        "arn:aws:dynamodb:*:*:table/ShopifyOrders",
+        "arn:aws:dynamodb:*:*:table/Shops",
+        "arn:aws:dynamodb:*:*:table/Templates",
+        "arn:aws:dynamodb:*:*:table/TemplateConfigurations"
+      ]
     },
     {
       "Effect": "Allow",

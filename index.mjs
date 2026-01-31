@@ -2,6 +2,7 @@ import { parseShopifyWebhook, transformShopifyOrderToInvoice } from './transform
 import { generateInvoicePDF } from './generators/pdfGenerator.mjs';
 import { uploadInvoiceToS3 } from './services/s3Service.mjs';
 import { sendInvoiceNotification } from './services/snsService.mjs';
+import { getTemplateConfig, formatConfigForPDF } from './services/templateConfigService.mjs';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 
@@ -10,14 +11,26 @@ const dynamodb = DynamoDBDocumentClient.from(client);
 
 export const handler = async (event) => {
     try {
+        console.log('Invoked with event:', JSON.stringify(event, null, 2));
         // Parse Shopify webhook payload
         const shopifyOrder = parseShopifyWebhook(event);
+        
+        // Extract shop domain from order
+        const shop = shopifyOrder.shop || shopifyOrder.domain;
+        console.log(`Processing order for shop: ${shop}`);
+        
+        // Fetch template configuration from DB or fallback to env
+        // The service will query Shops table to get the shop's configured templateId
+        const rawConfig = await getTemplateConfig(shop);
+        const templateConfig = formatConfigForPDF(rawConfig);
+        
+        console.log(`Using config from: ${templateConfig.source}`);
         
         // Transform Shopify order to invoice format
         const invoiceData = transformShopifyOrderToInvoice(shopifyOrder);
         
-        // Generate PDF using PDFKit
-        const pdfBuffer = await generateInvoicePDF(invoiceData);
+        // Generate PDF using PDFKit with template config
+        const pdfBuffer = await generateInvoicePDF(invoiceData, templateConfig);
         
         // Upload to S3
         const { fileName, s3Url } = await uploadInvoiceToS3(pdfBuffer, invoiceData.order.name);

@@ -170,7 +170,64 @@ export function transformShopifyOrderToInvoice(shopifyOrder) {
  * @returns {Object} Parsed Shopify order
  */
 export function parseShopifyWebhook(event) {
-    return typeof event.body === 'string' 
-        ? JSON.parse(event.body) 
-        : event.body || event;
+    // Log the event for debugging
+    console.log('Event structure:', JSON.stringify({
+        hasHeaders: !!event.headers,
+        headerKeys: event.headers ? Object.keys(event.headers) : [],
+        hasBody: !!event.body,
+        bodyType: typeof event.body,
+        hasOrderId: !!event.id,
+        hasOrderName: !!event.name
+    }));
+    
+    // Handle two cases:
+    // Case 1: API Gateway event (has headers and body)
+    // Case 2: Direct Lambda invocation (event IS the order object)
+    let body;
+    if (event.body) {
+        // API Gateway format
+        body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
+    } else if (event.id && event.name) {
+        // Direct invocation - event is the order itself
+        body = event;
+    } else {
+        // Fallback
+        body = event;
+    }
+    
+    // Extract shop domain from multiple sources with priority
+    const shopDomain = 
+        // Priority 1: Headers (for API Gateway events)
+        event.headers?.['X-Shopify-Shop-Domain'] 
+        || event.headers?.['x-shopify-shop-domain']
+        // Priority 2: Order body fields
+        || body.shop_domain
+        || body.myshopify_domain
+        || body.domain
+        // Priority 3: Extract from order source_name or other fields
+        || (body.source_name === 'shopify' && body.checkout_id ? extractShopFromCheckout(body) : null)
+        // Priority 4: Use environment variable as last resort
+        || process.env.DEFAULT_SHOP_DOMAIN;
+    
+    console.log('Extracted shop domain:', shopDomain);
+    
+    if (!shopDomain) {
+        console.warn('⚠️ Could not determine shop domain. Order fields:', Object.keys(body));
+    }
+    
+    // Add shop domain to the order object for easier access
+    return {
+        ...body,
+        shop: shopDomain
+    };
+}
+
+// Helper function to extract shop from checkout or other order metadata
+function extractShopFromCheckout(order) {
+    // Try to extract from admin_graphql_api_id or other fields
+    if (order.admin_graphql_api_id) {
+        // Format: gid://shopify/Order/123456789
+        return null; // Can't extract shop from this
+    }
+    return null;
 }

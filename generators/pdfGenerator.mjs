@@ -18,9 +18,10 @@ function getTemplate() {
 /**
  * Generates a PDF invoice from invoice data
  * @param {Object} data - Invoice data containing order, customer, line items, and totals
+ * @param {Object} templateConfig - Template configuration (from DB or env)
  * @returns {Promise<Buffer>} PDF buffer
  */
-export function generateInvoicePDF(data) {
+export function generateInvoicePDF(data, templateConfig = null) {
     return new Promise((resolve, reject) => {
         const doc = new PDFDocument({ 
             size: 'A4',
@@ -37,17 +38,18 @@ export function generateInvoicePDF(data) {
         // Get selected template
         const template = getTemplate();
         
-        // Get color scheme from environment variable or default to B&W
-        const primaryColor = process.env.INVOICE_PRIMARY_COLOR || '#333333';
-        const colorScheme = template.getColorScheme(primaryColor);
+        // Use provided config or fallback to env variable
+        const colorScheme = templateConfig ? 
+            template.getColorScheme(templateConfig.colors.primary, templateConfig.colors) :
+            template.getColorScheme(process.env.INVOICE_PRIMARY_COLOR || '#333333');
         
-        // Render invoice using template with color scheme
-        let yPos = template.renderHeader(doc, data, colorScheme);
-        yPos = template.renderOrderInfo(doc, data, yPos, colorScheme);
-        yPos = template.renderLineItems(doc, data, yPos, colorScheme);
-        yPos = template.renderTotals(doc, data, yPos, colorScheme);
-        yPos = template.renderSignature(doc, data, yPos, colorScheme);
-        yPos = template.renderFooter(doc, data, yPos, colorScheme);
+        // Render invoice using template with color scheme and config
+        let yPos = template.renderHeader(doc, data, colorScheme, templateConfig);
+        yPos = template.renderOrderInfo(doc, data, yPos, colorScheme, templateConfig);
+        yPos = template.renderLineItems(doc, data, yPos, colorScheme, templateConfig);
+        yPos = template.renderTotals(doc, data, yPos, colorScheme, templateConfig);
+        yPos = template.renderSignature(doc, data, yPos, colorScheme, templateConfig);
+        yPos = template.renderFooter(doc, data, yPos, colorScheme, templateConfig);
         
         doc.end();
     });
