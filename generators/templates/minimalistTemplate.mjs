@@ -210,6 +210,7 @@ export const minimalistTemplate = {
         // Font configuration
         const fontFamily = templateConfig?.fonts?.family || process.env.INVOICE_FONT_FAMILY || 'Helvetica';
         const headingSize = templateConfig?.fonts?.headingSize || parseInt(process.env.INVOICE_HEADING_FONT_SIZE) || 16;
+        const tableSize = templateConfig?.fonts?.tableSize || parseInt(process.env.INVOICE_TABLE_FONT_SIZE) || 8;
         
         doc.font(fontFamily)
            .fontSize(headingSize)
@@ -218,9 +219,13 @@ export const minimalistTemplate = {
         
         yPos += 30;
         
+        // Get header colors from config or defaults
+        const headerBgColor = templateConfig?.styling?.headerBackgroundColor || colorScheme.primary;
+        const headerTextColor = templateConfig?.styling?.headerTextColor || colorScheme.background;
+        
         // Table header with border
         doc.rect(50, yPos, 495, 35)
-           .fillAndStroke(colorScheme.primary, colorScheme.primary);
+           .fillAndStroke(headerBgColor, headerBgColor);
         
         // Table headers - conditionally show CGST/SGST or IGST based on transaction type
         const showCGSTSGST = data.totals.cgst && data.totals.sgst;
@@ -228,8 +233,8 @@ export const minimalistTemplate = {
         
         if (showCGSTSGST) {
             // Intrastate: Item, Qty, MRP, Discount, Price before tax, CGST, SGST, Price after tax
-            doc.fontSize(7)
-               .fillColor(colorScheme.background)
+            doc.fontSize(tableSize)
+               .fillColor(headerTextColor)
                .text('Item', 55, yPos + 12, { width: 90 })
                .text('Qty', 150, yPos + 12, { width: 20, align: 'center' })
                .text('MRP', 175, yPos + 12, { width: 48, align: 'right' })
@@ -240,14 +245,14 @@ export const minimalistTemplate = {
                .text('Price after tax', 400, yPos + 8, { width: 105, align: 'right' });
             
             // Draw vertical lines between columns
-            doc.strokeColor(colorScheme.background);
+            doc.strokeColor(headerTextColor);
             [148, 173, 226, 271, 326, 371, 416].forEach(x => {
                 doc.moveTo(x, yPos).lineTo(x, yPos + 35).stroke();
             });
         } else if (showIGST) {
             // Interstate: Item, Qty, MRP, Discount, Price before tax, IGST, Price after tax
-            doc.fontSize(7)
-               .fillColor(colorScheme.background)
+            doc.fontSize(tableSize)
+               .fillColor(headerTextColor)
                .text('Item', 55, yPos + 12, { width: 105 })
                .text('Qty', 165, yPos + 12, { width: 20, align: 'center' })
                .text('MRP', 190, yPos + 12, { width: 50, align: 'right' })
@@ -257,14 +262,14 @@ export const minimalistTemplate = {
                .text('Price after tax', 400, yPos + 8, { width: 105, align: 'right' });
             
             // Draw vertical lines between columns
-            doc.strokeColor(colorScheme.background);
+            doc.strokeColor(headerTextColor);
             [163, 188, 243, 293, 353, 408].forEach(x => {
                 doc.moveTo(x, yPos).lineTo(x, yPos + 35).stroke();
             });
         } else {
             // Fallback: Original format
-            doc.fontSize(8)
-               .fillColor(colorScheme.background)
+            doc.fontSize(tableSize)
+               .fillColor(headerTextColor)
                .text('Item', 55, yPos + 12, { width: 110 })
                .text('Qty', 170, yPos + 12, { width: 25, align: 'center' })
                .text('MRP', 200, yPos + 12, { width: 55, align: 'right' })
@@ -293,7 +298,7 @@ export const minimalistTemplate = {
                .strokeColor(colorScheme.border)
                .stroke();
             
-            doc.fontSize(7)
+            doc.fontSize(tableSize)
                .fillColor('#111827')
                .text(itemDisplayName, 55, yPos + 10, { width: textWidth });
             
@@ -302,7 +307,7 @@ export const minimalistTemplate = {
                 const cgstAmount = `Rs. ${item._cgst.toFixed(2)}`;
                 const sgstAmount = `Rs. ${item._sgst.toFixed(2)}`;
                 
-                doc.fontSize(7)
+                doc.fontSize(tableSize)
                    .fillColor('#111827')
                    .text(item.quantity.toString(), 150, yPos + 10, { width: 20, align: 'center' })
                    .text(item.mrp, 175, yPos + 10, { width: 48, align: 'right' })
@@ -321,7 +326,7 @@ export const minimalistTemplate = {
                 // Interstate: show IGST
                 const igstAmount = `Rs. ${item._igst.toFixed(2)}`;
                 
-                doc.fontSize(7)
+                doc.fontSize(tableSize)
                    .fillColor('#111827')
                    .text(item.quantity.toString(), 165, yPos + 10, { width: 20, align: 'center' })
                    .text(item.mrp, 190, yPos + 10, { width: 50, align: 'right' })
@@ -337,7 +342,7 @@ export const minimalistTemplate = {
                 });
             } else {
                 // Fallback: original format
-                doc.fontSize(8)
+                doc.fontSize(tableSize)
                    .fillColor('#111827')
                    .text(item.quantity.toString(), 170, yPos + 10, { width: 25, align: 'center' })
                    .text(item.mrp, 200, yPos + 10, { width: 55, align: 'right' })
@@ -449,12 +454,17 @@ export const minimalistTemplate = {
         
         const totalBoxX = totalsLabelX - 10;
         const totalBoxWidth = (totalsValueX + totalsValueWidth) - totalBoxX + 5;
+        
+        // Get header colors from config or defaults
+        const headerBgColor = templateConfig?.styling?.headerBackgroundColor || colorScheme.primary;
+        const headerTextColor = templateConfig?.styling?.headerTextColor || colorScheme.background;
+        
         doc.rect(totalBoxX, yPos - 10, totalBoxWidth, totalBoxHeight)
-           .fillColor(colorScheme.primary)
+           .fillColor(headerBgColor)
            .fill();
         
         doc.fontSize(bodySize + 2)
-           .fillColor(colorScheme.background)
+           .fillColor(headerTextColor)
            .text('TOTAL:', totalsLabelX, yPos);
         doc.fontSize(bodySize + 4)
            .text(data.totals.total, totalsValueX, yPos, { width: totalsValueWidth, align: 'right' });
@@ -466,8 +476,12 @@ export const minimalistTemplate = {
      * Render signature section (if configured)
      */
     async renderSignature(doc, data, yPos, colorScheme, templateConfig = null) {
+        // Check if signature is enabled and filename is provided
+        const includeSignature = templateConfig?.company?.includeSignature !== false; // Default to true if not specified
         const signatureFilename = templateConfig?.company?.signature || process.env.SIGNATURE_IMAGE_FILENAME;
-        if (!signatureFilename) {
+        
+        if (!includeSignature || !signatureFilename) {
+            console.log('Signature disabled or not configured, skipping signature section');
             return yPos;
         }
         

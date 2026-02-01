@@ -140,7 +140,12 @@ export function formatConfigForPDF(config) {
             emphasis: config.styling?.fonts?.emphasis || 'Helvetica-Bold',
             titleSize: config.styling?.titleFontSize || config.styling?.fonts?.titleSize || 28,
             headingSize: config.styling?.headingFontSize || config.styling?.fonts?.headingSize || 16,
-            bodySize: config.styling?.bodyFontSize || config.styling?.fonts?.bodySize || 11
+            bodySize: config.styling?.bodyFontSize || config.styling?.fonts?.bodySize || 11,
+            tableSize: config.styling?.itemTableFontSize || config.styling?.fonts?.tableSize || 8
+        },
+        styling: {
+            headerBackgroundColor: config.styling?.headerBackgroundColor || '#333333',
+            headerTextColor: config.styling?.headerTextColor || '#ffffff'
         },
         colors: {
             primary: config.styling?.primaryColor || config.styling?.colors?.primary || '#1a1a1a',
@@ -162,7 +167,9 @@ export function formatConfigForPDF(config) {
             phone: config.company?.phone || '',
             email: config.company?.email || config.company?.supportEmail || '',
             logo: config.company?.logo || config.company?.logoFilename || 'logo.jpg',
-            signature: config.company?.signature || config.company?.signatureFilename || ''
+            signature: config.company?.signature || config.company?.signatureFilename || '',
+            includeSignature: config.company?.includeSignature !== false,
+            sendEmailToCustomer: config.company?.sendEmailToCustomer || false
         },
         source: config.source || 'environment'
     };
