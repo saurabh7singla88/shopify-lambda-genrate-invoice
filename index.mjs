@@ -22,6 +22,8 @@ export const handler = async (event) => {
         console.log(`Processing order for shop: ${shop}, orderId: ${orderId}`);
         
         // IDEMPOTENCY CHECK: Check if invoice already exists for this order
+        console.log(`[Lambda Idempotency] Checking for existing invoice with orderId: ${orderId}`);
+        
         try {
             const existingInvoice = await dynamodb.send(new QueryCommand({
                 TableName: process.env.INVOICES_TABLE_NAME || 'Invoices',
@@ -34,7 +36,7 @@ export const handler = async (event) => {
             }));
             
             if (existingInvoice.Items && existingInvoice.Items.length > 0) {
-                console.log(`Invoice already exists for order ${orderId} (${existingInvoice.Items[0].invoiceId}), skipping duplicate processing`);
+                console.log(`[Lambda Idempotency] Invoice already exists for order ${orderId} (ID: ${existingInvoice.Items[0].invoiceId}), skipping duplicate processing`);
                 return {
                     statusCode: 200,
                     body: JSON.stringify({
@@ -45,8 +47,10 @@ export const handler = async (event) => {
                     })
                 };
             }
+            
+            console.log(`[Lambda Idempotency] No existing invoice found for order ${orderId}, proceeding with generation`);
         } catch (checkError) {
-            console.error('Error checking for existing invoice:', checkError);
+            console.error('[Lambda Idempotency] Error checking for existing invoice:', checkError);
             // Continue processing if check fails (better to have duplicate than miss an invoice)
         }
         
@@ -81,6 +85,7 @@ export const handler = async (event) => {
                     shop,
                     orderId: shopifyOrder.id?.toString() || invoiceData.order.name,
                     orderName: invoiceData.order.name,
+                    customerName: invoiceData.customer.name || '',
                     customerEmail: invoiceData.customer.email || '',
                     s3Key: fileName,
                     s3Url,
@@ -90,9 +95,10 @@ export const handler = async (event) => {
                     status: emailSentTo ? 'sent' : 'generated',
                     createdAt: now,
                     updatedAt: now
-                }
+                },
+                ConditionExpression: 'attribute_not_exists(invoiceId)' // Prevent duplicate writes
             }));
-            console.log(`Invoice record saved: ${invoiceId}`);
+            console.log(`Invoice record saved: ${invoiceId} for customer: ${invoiceData.customer.name}`);
         } catch (dbError) {
             console.error('Error saving invoice record:', dbError);
             // Continue even if DB save fails

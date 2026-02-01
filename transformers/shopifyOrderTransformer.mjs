@@ -134,7 +134,30 @@ export function transformShopifyOrderToInvoice(shopifyOrder) {
             notes: shopifyOrder.note || "Thank you for your purchase!"
         },
         customer: {
-            name: `${shopifyOrder.customer?.first_name || ''} ${shopifyOrder.customer?.last_name || ''}`.trim() || shopifyOrder.billing_address?.name || '',
+            name: (() => {
+                // Try customer object first
+                if (shopifyOrder.customer?.first_name || shopifyOrder.customer?.last_name) {
+                    return `${shopifyOrder.customer.first_name || ''} ${shopifyOrder.customer.last_name || ''}`.trim();
+                }
+                // Try billing address name field
+                if (shopifyOrder.billing_address?.name) {
+                    return shopifyOrder.billing_address.name;
+                }
+                // Try billing address first/last name
+                if (shopifyOrder.billing_address?.first_name || shopifyOrder.billing_address?.last_name) {
+                    return `${shopifyOrder.billing_address.first_name || ''} ${shopifyOrder.billing_address.last_name || ''}`.trim();
+                }
+                // Try shipping address name field
+                if (shopifyOrder.shipping_address?.name) {
+                    return shopifyOrder.shipping_address.name;
+                }
+                // Try shipping address first/last name
+                if (shopifyOrder.shipping_address?.first_name || shopifyOrder.shipping_address?.last_name) {
+                    return `${shopifyOrder.shipping_address.first_name || ''} ${shopifyOrder.shipping_address.last_name || ''}`.trim();
+                }
+                // Fallback to email if no name found
+                return shopifyOrder.contact_email || shopifyOrder.email || 'Guest';
+            })(),
             company: shopifyOrder.customer?.company || shopifyOrder.billing_address?.company || null,
             email: shopifyOrder.email || shopifyOrder.customer?.email || '',
             phone: shopifyOrder.phone || shopifyOrder.customer?.phone || shopifyOrder.billing_address?.phone || null

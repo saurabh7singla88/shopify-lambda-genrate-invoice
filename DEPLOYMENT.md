@@ -142,7 +142,11 @@ zip -r lambda-deployment.zip index.mjs package.json node_modules/ config/ transf
       "Effect": "Allow",
       "Action": [
         "s3:PutObject",
-        "s3:PutObjectAcl"
+        "s3:PutObjectAcl",
+        "s3:GetObject",
+        "s3:DeleteObject",
+        "s3:CopyObject",
+        "s3:ListBucket"
       ],
       "Resource": "arn:aws:s3:::your-invoice-bucket-name/*"
     },
@@ -157,14 +161,22 @@ zip -r lambda-deployment.zip index.mjs package.json node_modules/ config/ transf
       "Effect": "Allow",
       "Action": [
         "dynamodb:GetItem",
+        "dynamodb:PutItem",
         "dynamodb:Query",
-        "dynamodb:UpdateItem"
+        "dynamodb:UpdateItem",
+        "dynamodb:Scan"
       ],
       "Resource": [
         "arn:aws:dynamodb:*:*:table/ShopifyOrders",
+        "arn:aws:dynamodb:*:*:table/ShopifyOrders/index/*",
         "arn:aws:dynamodb:*:*:table/Shops",
+        "arn:aws:dynamodb:*:*:table/Shops/index/*",
         "arn:aws:dynamodb:*:*:table/Templates",
-        "arn:aws:dynamodb:*:*:table/TemplateConfigurations"
+        "arn:aws:dynamodb:*:*:table/Templates/index/*",
+        "arn:aws:dynamodb:*:*:table/TemplateConfigurations",
+        "arn:aws:dynamodb:*:*:table/TemplateConfigurations/index/*",
+        "arn:aws:dynamodb:*:*:table/Invoices",
+        "arn:aws:dynamodb:*:*:table/Invoices/index/*"
       ]
     },
     {
