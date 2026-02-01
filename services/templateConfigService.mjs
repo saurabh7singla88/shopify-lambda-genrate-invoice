@@ -134,29 +134,35 @@ export function formatConfigForPDF(config) {
     return {
         template: config.templateId || 'minimalist',
         fonts: {
+            family: config.styling?.fontFamily || config.styling?.fonts?.family || 'Helvetica',
             heading: config.styling?.fonts?.heading || 'Helvetica-Bold',
             body: config.styling?.fonts?.body || 'Helvetica',
-            emphasis: config.styling?.fonts?.emphasis || 'Helvetica-Bold'
+            emphasis: config.styling?.fonts?.emphasis || 'Helvetica-Bold',
+            titleSize: config.styling?.titleFontSize || config.styling?.fonts?.titleSize || 28,
+            headingSize: config.styling?.headingFontSize || config.styling?.fonts?.headingSize || 16,
+            bodySize: config.styling?.bodyFontSize || config.styling?.fonts?.bodySize || 11
         },
         colors: {
-            primary: config.styling?.colors?.primary || '#1a1a1a',
+            primary: config.styling?.primaryColor || config.styling?.colors?.primary || '#1a1a1a',
             secondary: config.styling?.colors?.secondary || '#666666',
-            accent: config.styling?.colors?.accent || '#0066cc',
+            accent: config.styling?.colors?.accent || config.styling?.primaryColor || '#0066cc',
             background: config.styling?.colors?.background || '#ffffff',
             border: config.styling?.colors?.border || '#dddddd'
         },
         company: {
-            name: config.company?.name || 'Your Company Name',
+            name: config.company?.name || config.company?.companyName || 'Your Company Name',
             legalName: config.company?.legalName || config.company?.name || 'Legal Entity Name',
-            address: config.company?.address || 'Address Line 1',
-            addressLine2: config.company?.city ? 
-                `${config.company.city}${config.company.state ? ', ' + config.company.state : ''} ${config.company.zipCode || ''}`.trim() :
-                config.company?.addressLine2 || 'Address Line 2',
+            address: {
+                line1: config.company?.addressLine1 || config.company?.address || 'Address Line 1',
+                line2: config.company?.addressLine2 || 'Address Line 2',
+                state: config.company?.state || ''
+            },
             gstin: config.company?.gstin || 'GSTIN Number',
             pan: config.company?.pan || '',
             phone: config.company?.phone || '',
-            email: config.company?.email || '',
-            logo: config.company?.logo || 'logo.jpg'
+            email: config.company?.email || config.company?.supportEmail || '',
+            logo: config.company?.logo || config.company?.logoFilename || 'logo.jpg',
+            signature: config.company?.signature || config.company?.signatureFilename || ''
         },
         source: config.source || 'environment'
     };

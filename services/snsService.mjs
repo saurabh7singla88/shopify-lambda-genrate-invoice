@@ -91,36 +91,75 @@ This is an automated invoice notification from PistaGreen Invoice System.
  * Sends an email notification via SNS
  * @param {Object} invoiceData - Invoice data
  * @param {string} s3Url - URL to the PDF in S3
- * @returns {Promise<void>}
+ * @param {Object} templateConfig - Template configuration with email settings
+ * @returns {Promise<string|null>} Email address where notification was sent, or null if not sent
  */
-export async function sendInvoiceNotification(invoiceData, s3Url) {
+export async function sendInvoiceNotification(invoiceData, s3Url, templateConfig = null) {
     try {
+        console.log('SNS Configuration check:', {
+            snsTopicArn: process.env.SNS_TOPIC_ARN,
+            templateConfigExists: !!templateConfig,
+            sendToCustomer: templateConfig?.company?.sendEmailToCustomer,
+            ownerEmail: templateConfig?.company?.ownerEmail,
+            customerEmail: invoiceData.customer.email
+        });
+        
+        // Check if SNS is configured
+        if (!process.env.SNS_TOPIC_ARN) {
+            console.log('SNS_TOPIC_ARN not configured, skipping email notification');
+            return null;
+        }
+        
+        // Determine recipient email based on configuration
+        let recipientEmail = null;
+        
+        if (templateConfig?.company?.sendEmailToCustomer && invoiceData.customer.email) {
+            // Send to customer if enabled and customer email exists
+            recipientEmail = invoiceData.customer.email;
+            console.log('Sending to customer email:', recipientEmail);
+        } else if (templateConfig?.company?.ownerEmail) {
+            // Otherwise send to owner email
+            recipientEmail = templateConfig.company.ownerEmail;
+            console.log('Sending to owner email:', recipientEmail);
+        }
+        
+        // Don't send email if no recipient
+        if (!recipientEmail || recipientEmail.trim() === '') {
+            console.log('No recipient email configured, skipping email notification');
+            return null;
+        }
+        
         const emailMessage = buildEmailMessage(invoiceData, s3Url);
+        
+        // Build message attributes, only include non-empty values
+        const messageAttributes = {
+            orderNumber: {
+                DataType: 'String',
+                StringValue: invoiceData.order.name
+            },
+            invoiceUrl: {
+                DataType: 'String',
+                StringValue: s3Url
+            },
+            recipientEmail: {
+                DataType: 'String',
+                StringValue: recipientEmail
+            }
+        };
         
         const snsParams = {
             TopicArn: process.env.SNS_TOPIC_ARN,
             Subject: `Invoice ${invoiceData.order.name} - ${invoiceData.totals.total}`,
             Message: emailMessage,
-            MessageAttributes: {
-                orderNumber: {
-                    DataType: 'String',
-                    StringValue: invoiceData.order.name
-                },
-                customerEmail: {
-                    DataType: 'String',
-                    StringValue: invoiceData.customer.email
-                },
-                invoiceUrl: {
-                    DataType: 'String',
-                    StringValue: s3Url
-                }
-            }
+            MessageAttributes: messageAttributes
         };
         
         await snsClient.send(new PublishCommand(snsParams));
-        console.log('Email notification sent via SNS');
+        console.log(`Email notification sent via SNS to: ${recipientEmail}`);
+        return recipientEmail;
     } catch (snsError) {
         console.error('Error sending SNS notification:', snsError);
         // Continue even if email fails - don't throw
+        return null;
     }
 }
