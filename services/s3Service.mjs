@@ -32,3 +32,33 @@ export async function uploadInvoiceToS3(pdfBuffer, orderName) {
     
     return { fileName, s3Url };
 }
+
+/**
+ * Downloads an image from S3 (for logos, signatures, etc.)
+ * @param {string} s3Key - The S3 key/path of the image
+ * @returns {Promise<Buffer>} Image buffer
+ */
+export async function downloadImageFromS3(s3Key) {
+    try {
+        const getObjectParams = {
+            Bucket: process.env.S3_BUCKET_NAME,
+            Key: s3Key
+        };
+        
+        const response = await s3Client.send(new GetObjectCommand(getObjectParams));
+        const stream = response.Body;
+        
+        // Convert stream to buffer
+        const chunks = [];
+        for await (const chunk of stream) {
+            chunks.push(chunk);
+        }
+        
+        const buffer = Buffer.concat(chunks);
+        console.log(`Image downloaded from S3: ${s3Key}`);
+        return buffer;
+    } catch (error) {
+        console.error(`Error downloading image from S3: ${s3Key}`, error);
+        throw error;
+    }
+}

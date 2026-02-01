@@ -21,8 +21,8 @@ function getTemplate() {
  * @param {Object} templateConfig - Template configuration (from DB or env)
  * @returns {Promise<Buffer>} PDF buffer
  */
-export function generateInvoicePDF(data, templateConfig = null) {
-    return new Promise((resolve, reject) => {
+export async function generateInvoicePDF(data, templateConfig = null) {
+    return new Promise(async (resolve, reject) => {
         const doc = new PDFDocument({ 
             size: 'A4',
             margins: { top: 50, bottom: 50, left: 50, right: 50 }
@@ -35,22 +35,26 @@ export function generateInvoicePDF(data, templateConfig = null) {
         doc.on('end', () => resolve(Buffer.concat(chunks)));
         doc.on('error', reject);
         
-        // Get selected template
-        const template = getTemplate();
-        
-        // Use provided config or fallback to env variable
-        const colorScheme = templateConfig ? 
-            template.getColorScheme(templateConfig.colors.primary, templateConfig.colors) :
-            template.getColorScheme(process.env.INVOICE_PRIMARY_COLOR || '#333333');
-        
-        // Render invoice using template with color scheme and config
-        let yPos = template.renderHeader(doc, data, colorScheme, templateConfig);
-        yPos = template.renderOrderInfo(doc, data, yPos, colorScheme, templateConfig);
-        yPos = template.renderLineItems(doc, data, yPos, colorScheme, templateConfig);
-        yPos = template.renderTotals(doc, data, yPos, colorScheme, templateConfig);
-        yPos = template.renderSignature(doc, data, yPos, colorScheme, templateConfig);
-        yPos = template.renderFooter(doc, data, yPos, colorScheme, templateConfig);
-        
-        doc.end();
+        try {
+            // Get selected template
+            const template = getTemplate();
+            
+            // Use provided config or fallback to env variable
+            const colorScheme = templateConfig ? 
+                template.getColorScheme(templateConfig.colors.primary, templateConfig.colors) :
+                template.getColorScheme(process.env.INVOICE_PRIMARY_COLOR || '#333333');
+            
+            // Render invoice using template with color scheme and config (now async)
+            let yPos = await template.renderHeader(doc, data, colorScheme, templateConfig);
+            yPos = template.renderOrderInfo(doc, data, yPos, colorScheme, templateConfig);
+            yPos = template.renderLineItems(doc, data, yPos, colorScheme, templateConfig);
+            yPos = template.renderTotals(doc, data, yPos, colorScheme, templateConfig);
+            yPos = await template.renderSignature(doc, data, yPos, colorScheme, templateConfig);
+            yPos = template.renderFooter(doc, data, yPos, colorScheme, templateConfig);
+            
+            doc.end();
+        } catch (error) {
+            reject(error);
+        }
     });
 }

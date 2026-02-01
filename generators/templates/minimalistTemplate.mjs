@@ -1,6 +1,7 @@
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { downloadImageFromS3 } from '../../services/s3Service.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -58,7 +59,7 @@ export const minimalistTemplate = {
     /**
      * Render company header with logo
      */
-    renderHeader(doc, data, colorScheme, templateConfig = null) {
+    async renderHeader(doc, data, colorScheme, templateConfig = null) {
         const companyName = templateConfig?.company?.name || process.env.COMPANY_NAME || 'Your Company Name';
         const companyLegalName = templateConfig?.company?.legalName || process.env.COMPANY_LEGAL_NAME || 'Legal Entity Name';
         const companyAddress1 = templateConfig?.company?.address?.line1 || process.env.COMPANY_ADDRESS_LINE1 || 'Address Line 1';
@@ -97,10 +98,22 @@ export const minimalistTemplate = {
         yPos += bodyLineHeight;
         doc.text(companyGSTIN, 50, yPos);
         
-        // Logo Image (Top Right)
+        // Logo Image (Top Right) - fetch from S3 or local assets
         try {
-            const logoPath = join(__dirname, '..', '..', 'assets', companyLogo);
-            doc.image(logoPath, 455, 55, { width: 90 });
+            let logoBuffer;
+            
+            // Check if logo is an S3 path (contains /)
+            if (companyLogo.includes('/')) {
+                console.log(`Fetching logo from S3: ${companyLogo}`);
+                logoBuffer = await downloadImageFromS3(companyLogo);
+            } else {
+                // Local assets folder
+                const logoPath = join(__dirname, '..', '..', 'assets', companyLogo);
+                const fs = await import('fs');
+                logoBuffer = fs.readFileSync(logoPath);
+            }
+            
+            doc.image(logoBuffer, 455, 55, { width: 90 });
         } catch (error) {
             console.error('Logo file not found, skipping logo:', error.message);
         }
@@ -452,7 +465,7 @@ export const minimalistTemplate = {
     /**
      * Render signature section (if configured)
      */
-    renderSignature(doc, data, yPos, colorScheme, templateConfig = null) {
+    async renderSignature(doc, data, yPos, colorScheme, templateConfig = null) {
         const signatureFilename = templateConfig?.company?.signature || process.env.SIGNATURE_IMAGE_FILENAME;
         if (!signatureFilename) {
             return yPos;
@@ -464,7 +477,19 @@ export const minimalistTemplate = {
         const bodyLineHeight = bodySize * 1.5;
         
         try {
-            const signaturePath = join(__dirname, '..', '..', 'assets', signatureFilename);
+            let signatureBuffer;
+            
+            // Check if signature is an S3 path (contains /)
+            if (signatureFilename.includes('/')) {
+                console.log(`Fetching signature from S3: ${signatureFilename}`);
+                signatureBuffer = await downloadImageFromS3(signatureFilename);
+            } else {
+                // Local assets folder
+                const signaturePath = join(__dirname, '..', '..', 'assets', signatureFilename);
+                const fs = await import('fs');
+                signatureBuffer = fs.readFileSync(signaturePath);
+            }
+            
             yPos += bodyLineHeight * 3;
             
             // Signature label
@@ -474,7 +499,7 @@ export const minimalistTemplate = {
                .text('Authorized Signatory', 400, yPos, { width: 145, align: 'center' });
             
             // Signature image
-            doc.image(signaturePath, 415, yPos + 15, { width: 115, height: 40, fit: [115, 40] });
+            doc.image(signatureBuffer, 415, yPos + 15, { width: 115, height: 40, fit: [115, 40] });
             
             // Line above signature
             doc.moveTo(400, yPos + 60)
