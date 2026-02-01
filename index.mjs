@@ -63,8 +63,8 @@ export const handler = async (event) => {
         // Generate PDF using PDFKit with template config
         const pdfBuffer = await generateInvoicePDF(invoiceData, templateConfig);
         
-        // Upload to S3
-        const { fileName, s3Url } = await uploadInvoiceToS3(pdfBuffer, invoiceData.order.name);
+        // Upload to S3 with shop-specific path
+        const { fileName, s3Url } = await uploadInvoiceToS3(pdfBuffer, invoiceData.order.name, shop);
         
         // Send email notification via SNS (returns recipient email or null)
         const emailSentTo = await sendInvoiceNotification(invoiceData, s3Url, templateConfig);

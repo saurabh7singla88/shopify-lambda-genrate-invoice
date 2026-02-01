@@ -6,10 +6,13 @@ import { s3Client } from '../config/awsClients.mjs';
  * Uploads a PDF buffer to S3
  * @param {Buffer} pdfBuffer - The PDF file buffer
  * @param {string} orderName - Order name/number for filename
+ * @param {string} shop - Shop domain for organizing files
  * @returns {Promise<Object>} Object with fileName and s3Url (pre-signed URL valid for 24 hours)
  */
-export async function uploadInvoiceToS3(pdfBuffer, orderName) {
-    const fileName = `invoices/invoice-${orderName.replace('#', '')}-${Date.now()}.pdf`;
+export async function uploadInvoiceToS3(pdfBuffer, orderName, shop = 'default') {
+    // Sanitize shop domain for file path (replace dots with dashes)
+    const sanitizedShop = shop.replace(/\./g, '-');
+    const fileName = `shops/${sanitizedShop}/invoices/invoice-${orderName.replace('#', '')}-${Date.now()}.pdf`;
     const uploadParams = {
         Bucket: process.env.S3_BUCKET_NAME,
         Key: fileName,
