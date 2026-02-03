@@ -60,17 +60,20 @@ export const minimalistTemplate = {
      * Render company header with logo
      */
     async renderHeader(doc, data, colorScheme, templateConfig = null) {
-        const companyName = templateConfig?.company?.name || process.env.COMPANY_NAME || 'Your Company Name';
-        const companyLegalName = templateConfig?.company?.legalName || process.env.COMPANY_LEGAL_NAME || 'Legal Entity Name';
-        const companyAddress1 = templateConfig?.company?.address?.line1 || process.env.COMPANY_ADDRESS_LINE1 || 'Address Line 1';
-        const companyAddress2 = templateConfig?.company?.address?.line2 || process.env.COMPANY_ADDRESS_LINE2 || 'Address Line 2';
-        const companyGSTIN = templateConfig?.company?.gstin || process.env.COMPANY_GSTIN || 'GSTIN Number';
-        const companyLogo = templateConfig?.company?.logo || process.env.COMPANY_LOGO_FILENAME || 'logo.JPG';
+        const companyName = templateConfig?.company?.name || 'Your Company Name';
+        const companyLegalName = templateConfig?.company?.legalName || 'Legal Entity Name';
+        const companyAddress1 = templateConfig?.company?.address?.line1 || 'Address Line 1';
+        const companyAddress2 = templateConfig?.company?.address?.line2 || 'Address Line 2';
+        const companyCity = templateConfig?.company?.address?.city || '';
+        const companyState = templateConfig?.company?.address?.state || '';
+        const companyPincode = templateConfig?.company?.address?.pincode || '';
+        const companyGSTIN = templateConfig?.company?.gstin || 'GSTIN Number';
+        const companyLogo = templateConfig?.company?.logo || 'logo.JPG';
         
         // Font configuration
-        const fontFamily = templateConfig?.fonts?.family || process.env.INVOICE_FONT_FAMILY || 'Helvetica';
-        const titleSize = templateConfig?.fonts?.titleSize || parseInt(process.env.INVOICE_TITLE_FONT_SIZE) || 28;
-        const bodySize = templateConfig?.fonts?.bodySize || parseInt(process.env.INVOICE_BODY_FONT_SIZE) || 11;
+        const fontFamily = templateConfig?.fonts?.family || 'Helvetica';
+        const titleSize = templateConfig?.fonts?.titleSize || 28;
+        const bodySize = templateConfig?.fonts?.bodySize || 11;
         
         // Calculate dynamic spacing based on font sizes
         const titleLineHeight = titleSize * 1.2;
@@ -95,7 +98,14 @@ export const minimalistTemplate = {
         yPos += bodyLineHeight;
         doc.text(companyAddress2, 50, yPos);
         
+        // Build city, state, pincode line
         yPos += bodyLineHeight;
+        const locationParts = [companyCity, companyState, companyPincode].filter(Boolean);
+        if (locationParts.length > 0) {
+            doc.text(locationParts.join(', '), 50, yPos);
+            yPos += bodyLineHeight;
+        }
+        
         doc.text(companyGSTIN, 50, yPos);
         
         // Logo Image (Top Right) - fetch from S3 or local assets
@@ -133,9 +143,9 @@ export const minimalistTemplate = {
      */
     renderOrderInfo(doc, data, yPos, colorScheme, templateConfig = null) {
         // Font configuration
-        const fontFamily = templateConfig?.fonts?.family || process.env.INVOICE_FONT_FAMILY || 'Helvetica';
-        const headingSize = templateConfig?.fonts?.headingSize || parseInt(process.env.INVOICE_HEADING_FONT_SIZE) || 16;
-        const bodySize = templateConfig?.fonts?.bodySize || parseInt(process.env.INVOICE_BODY_FONT_SIZE) || 11;
+        const fontFamily = templateConfig?.fonts?.family || 'Helvetica';
+        const headingSize = templateConfig?.fonts?.headingSize || 16;
+        const bodySize = templateConfig?.fonts?.bodySize || 11;
         
         // Calculate dynamic spacing
         const headingLineHeight = headingSize * 1.4;
@@ -208,9 +218,9 @@ export const minimalistTemplate = {
         yPos += 10;
         
         // Font configuration
-        const fontFamily = templateConfig?.fonts?.family || process.env.INVOICE_FONT_FAMILY || 'Helvetica';
-        const headingSize = templateConfig?.fonts?.headingSize || parseInt(process.env.INVOICE_HEADING_FONT_SIZE) || 16;
-        const tableSize = templateConfig?.fonts?.tableSize || parseInt(process.env.INVOICE_TABLE_FONT_SIZE) || 8;
+        const fontFamily = templateConfig?.fonts?.family || 'Helvetica';
+        const headingSize = templateConfig?.fonts?.headingSize || 16;
+        const tableSize = templateConfig?.fonts?.tableSize || 8;
         
         doc.font(fontFamily)
            .fontSize(headingSize)
@@ -363,8 +373,8 @@ export const minimalistTemplate = {
      */
     renderTotals(doc, data, yPos, colorScheme, templateConfig = null) {
         // Font configuration
-        const fontFamily = templateConfig?.fonts?.family || process.env.INVOICE_FONT_FAMILY || 'Helvetica';
-        const bodySize = templateConfig?.fonts?.bodySize || parseInt(process.env.INVOICE_BODY_FONT_SIZE) || 11;
+        const fontFamily = templateConfig?.fonts?.family || 'Helvetica';
+        const bodySize = templateConfig?.fonts?.bodySize || 11;
         
         // Calculate dynamic spacing
         const bodyLineHeight = bodySize * 1.5;
@@ -478,7 +488,7 @@ export const minimalistTemplate = {
     async renderSignature(doc, data, yPos, colorScheme, templateConfig = null) {
         // Check if signature is enabled and filename is provided
         const includeSignature = templateConfig?.company?.includeSignature !== false; // Default to true if not specified
-        const signatureFilename = templateConfig?.company?.signature || process.env.SIGNATURE_IMAGE_FILENAME;
+        const signatureFilename = templateConfig?.company?.signature;
         
         if (!includeSignature || !signatureFilename) {
             console.log('Signature disabled or not configured, skipping signature section');
@@ -486,8 +496,8 @@ export const minimalistTemplate = {
         }
         
         // Font configuration
-        const fontFamily = templateConfig?.fonts?.family || process.env.INVOICE_FONT_FAMILY || 'Helvetica';
-        const bodySize = templateConfig?.fonts?.bodySize || parseInt(process.env.INVOICE_BODY_FONT_SIZE) || 11;
+        const fontFamily = templateConfig?.fonts?.family || 'Helvetica';
+        const bodySize = templateConfig?.fonts?.bodySize || 11;
         const bodyLineHeight = bodySize * 1.5;
         
         try {
@@ -534,14 +544,15 @@ export const minimalistTemplate = {
      */
     renderFooter(doc, data, yPos, colorScheme, templateConfig = null) {
         // Font configuration
-        const fontFamily = templateConfig?.fonts?.family || process.env.INVOICE_FONT_FAMILY || 'Helvetica';
-        const headingSize = templateConfig?.fonts?.headingSize || parseInt(process.env.INVOICE_HEADING_FONT_SIZE) || 16;
-        const bodySize = templateConfig?.fonts?.bodySize || parseInt(process.env.INVOICE_BODY_FONT_SIZE) || 11;
+        const fontFamily = templateConfig?.fonts?.family || 'Helvetica';
+        const headingSize = templateConfig?.fonts?.headingSize || 16;
+        const bodySize = templateConfig?.fonts?.bodySize || 11;
         const bodyLineHeight = bodySize * 1.5;
         
         yPos += bodyLineHeight * 4;
         
-        const companyState = templateConfig?.company?.address?.state || process.env.COMPANY_STATE || 'the respective';
+        const companyState = templateConfig?.company?.address?.state || 'the respective';
+        const companyEmail = templateConfig?.company?.email || null;
         
         if (data.order.notes) {
             doc.font(fontFamily)

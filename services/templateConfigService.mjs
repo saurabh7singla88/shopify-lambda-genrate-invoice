@@ -160,7 +160,9 @@ export function formatConfigForPDF(config) {
             address: {
                 line1: config.company?.addressLine1 || config.company?.address || 'Address Line 1',
                 line2: config.company?.addressLine2 || 'Address Line 2',
-                state: config.company?.state || ''
+                city: config.company?.city || '',
+                state: config.company?.state || '',
+                pincode: config.company?.pincode || ''
             },
             gstin: config.company?.gstin || 'GSTIN Number',
             pan: config.company?.pan || '',
