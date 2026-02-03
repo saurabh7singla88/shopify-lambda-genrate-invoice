@@ -10,7 +10,7 @@ export function transformShopifyOrderToInvoice(shopifyOrder) {
     const currencySymbol = shopifyOrder.currency === 'INR' ? 'Rs.' : shopifyOrder.currency;
     
     // Extract seller and buyer states for GST calculation
-    const sellerState = process.env.COMPANY_STATE || 'Punjab'; // Default from env or config
+    const sellerState = process.env.COMPANY_STATE || 'UNKNOWN'; // Should come from template config
     const buyerState = shopifyOrder.shipping_address?.province || shopifyOrder.billing_address?.province || '';
     const isIntrastateTxn = isIntrastate(sellerState, buyerState);
     

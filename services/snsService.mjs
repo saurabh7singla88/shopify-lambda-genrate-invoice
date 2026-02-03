@@ -5,9 +5,10 @@ import { snsClient } from '../config/awsClients.mjs';
  * Builds a formatted email message for the invoice
  * @param {Object} invoiceData - Invoice data
  * @param {string} s3Url - URL to the PDF in S3
+ * @param {Object} templateConfig - Template configuration with company details
  * @returns {string} Formatted email message
  */
-function buildEmailMessage(invoiceData, s3Url) {
+function buildEmailMessage(invoiceData, s3Url, templateConfig) {
     // Build line items table
     let lineItemsText = '';
     invoiceData.lineItems.forEach((item, index) => {
@@ -19,11 +20,11 @@ function buildEmailMessage(invoiceData, s3Url) {
         lineItemsText += '\n';
     });
     
-    const companyName = process.env.COMPANY_NAME || 'Your Company Name';
-    const companyLegalName = process.env.COMPANY_LEGAL_NAME || 'Legal Entity Name';
-    const companyAddress1 = process.env.COMPANY_ADDRESS_LINE1 || 'Address Line 1';
-    const companyAddress2 = process.env.COMPANY_ADDRESS_LINE2 || 'Address Line 2';
-    const companyGSTIN = process.env.COMPANY_GSTIN || 'GSTIN Number';
+    const companyName = templateConfig?.company?.name || 'Your Company Name';
+    const companyLegalName = templateConfig?.company?.legalName || 'Legal Entity Name';
+    const companyAddress1 = templateConfig?.company?.address?.line1 || 'Address Line 1';
+    const companyAddress2 = templateConfig?.company?.address?.line2 || 'Address Line 2';
+    const companyGSTIN = templateConfig?.company?.gstin || 'GSTIN Number';
     
     return `
 ╔═══════════════════════════════════════════════════════════════════════╗
@@ -129,7 +130,7 @@ export async function sendInvoiceNotification(invoiceData, s3Url, templateConfig
             return null;
         }
         
-        const emailMessage = buildEmailMessage(invoiceData, s3Url);
+        const emailMessage = buildEmailMessage(invoiceData, s3Url, templateConfig);
         
         // Build message attributes, only include non-empty values
         const messageAttributes = {
