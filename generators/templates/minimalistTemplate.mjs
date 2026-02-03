@@ -555,9 +555,13 @@ export const minimalistTemplate = {
                .text(data.order.notes, 50, yPos, { width: 495 });
             
             yPos += bodyLineHeight - 2;
-            doc.fontSize(bodySize - 2)
-               .fillColor('#111827')
-               .text('\nIf you have any questions, please contact at support@pistagreen.com', 50, yPos, { width: 495 });
+            
+            // Contact information
+            if (companyEmail) {
+               doc.fontSize(bodySize - 2)
+                  .fillColor('#111827')
+                  .text(`\nIf you have any questions, please contact at ${companyEmail}`, 50, yPos, { width: 495 });
+            }
 
             yPos += bodyLineHeight * 2;
             doc.fontSize(bodySize - 3)
