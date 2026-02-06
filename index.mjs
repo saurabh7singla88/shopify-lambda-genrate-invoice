@@ -104,6 +104,54 @@ export const handler = async (event) => {
             // Continue even if DB save fails
         }
         
+        // Update GST Reporting Data with actual invoice ID
+        try {
+            const gstTableName = process.env.SHOPIFY_ORDER_ITEMS_TABLE || 'ShopifyOrderItems';
+            console.log(`Updating GST reporting data for order ${invoiceData.order.name} with invoice ID ${invoiceId}`);
+            
+            // Get ISO date from order created_at
+            const orderDate = new Date(shopifyOrder.created_at).toISOString().split('T')[0]; // Format: YYYY-MM-DD
+            const yearMonth = orderDate.substring(0, 7); // Format: YYYY-MM
+            
+            // Query GST data by order number
+            const gstQuery = await dynamodb.send(new QueryCommand({
+                TableName: gstTableName,
+                KeyConditionExpression: 'shop = :shop AND begins_with(orderNumber_lineItemIdx, :orderNumber)',
+                ExpressionAttributeValues: {
+                    ':shop': shop,
+                    ':orderNumber': invoiceData.order.name + '#'
+                }
+            }));
+            
+            if (gstQuery.Items && gstQuery.Items.length > 0) {
+                console.log(`Found ${gstQuery.Items.length} GST line items to update`);
+                
+                // Update each line item with actual invoice ID
+                for (const item of gstQuery.Items) {
+                    await dynamodb.send(new UpdateCommand({
+                        TableName: gstTableName,
+                        Key: {
+                            shop: item.shop,
+                            orderNumber_lineItemIdx: item.orderNumber_lineItemIdx
+                        },
+                        UpdateExpression: 'SET invoiceId = :invoiceId, updatedAt = :updatedAt, updatedBy = :updatedBy',
+                        ExpressionAttributeValues: {
+                            ':invoiceId': invoiceId,
+                            ':updatedAt': new Date().toISOString(),
+                            ':updatedBy': 'lambda-generate-invoice'
+                        }
+                    }));
+                }
+                
+                console.log(`Updated ${gstQuery.Items.length} GST reporting records with invoice ID ${invoiceId}`);
+            } else {
+                console.log('No GST reporting data found for this order');
+            }
+        } catch (gstError) {
+            console.error('Error updating GST reporting data:', gstError);
+            // Continue even if GST update fails
+        }
+        
         // Update ShopifyOrders table with S3 key (legacy)
         try {
             await dynamodb.send(new UpdateCommand({
